@@ -3,105 +3,242 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Camera Interaction App</title>
+    <title>SmolVLM Realtime</title>
     <style>
+        :root {
+            --primary-color: #0066cc;
+            --bg-color: #ffffff;
+            --panel-bg: #f8f9fa;
+            --text-color: #2c3e50;
+            --border-color: #e2e8f0;
+            --header-height: 60px;
+        }
+
         body {
-            font-family: sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 20px;
-            padding: 20px;
-            background-color: #f0f0f0;
+            gap: 24px;
+            padding: 0;
+            margin: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            line-height: 1.5;
         }
-        .controls, .io-areas {
+
+        .header {
+            width: 100%;
+            background: var(--bg-color);
+            height: var(--header-height);
             display: flex;
-            gap: 10px;
+            justify-content: space-between;
             align-items: center;
-            background-color: #fff;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            padding: 0 32px;
+            box-sizing: border-box;
+            border-bottom: 1px solid var(--border-color);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .twitter-handle {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: color 0.2s ease;
+        }
+
+        .twitter-handle:hover {
+            color: #0052a3;
+        }
+
+        .twitter-handle svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
+
+        .main-content {
+            width: 100%;
+            max-width: 1200px;
+            padding: 24px 32px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 24px;
+        }
+
+        h1 {
+            font-size: 1.75em;
+            font-weight: 600;
+            color: var(--text-color);
+            margin: 0;
+        }
+
+        .controls, .io-areas {
+            width: 100%;
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            background-color: var(--panel-bg);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--border-color);
+        }
+
         .io-areas {
             flex-direction: column;
             align-items: stretch;
         }
-        textarea {
-            width: 300px;
-            height: 80px;
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
+
+        textarea, input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background-color: white;
+            color: var(--text-color);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace;
             font-size: 14px;
+            transition: border-color 0.2s ease;
+            resize: vertical;
         }
+
+        textarea:focus, input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.1);
+        }
+
         #videoFeed {
-            width: 480px;
-            height: 360px;
-            border: 2px solid #333;
-            background-color: #000;
+            width: 100%;
+            max-width: 800px;
+            aspect-ratio: 4/3;
+            border: 1px solid var(--border-color);
+            background-color: #f1f5f9;
             border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
+
         #startButton {
-            padding: 10px 20px;
-            font-size: 16px;
+            padding: 8px 24px;
+            font-size: 14px;
+            font-weight: 500;
             cursor: pointer;
             border: none;
-            border-radius: 4px;
+            border-radius: 6px;
             color: white;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.2s ease;
         }
+
         #startButton.start {
-            background-color: #28a745; /* Green */
+            background-color: #28a745;
         }
+
         #startButton.stop {
-            background-color: #dc3545; /* Red */
+            background-color: #dc3545;
         }
+
+        #startButton:hover {
+            filter: brightness(0.95);
+        }
+
+        #startButton:active {
+            transform: translateY(1px);
+        }
+
         label {
-            font-weight: bold;
+            font-weight: 500;
+            color: var(--text-color);
+            font-size: 0.875em;
+            margin-bottom: 4px;
+            display: block;
         }
+
         select {
-            padding: 8px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background-color: white;
+            color: var(--text-color);
+            cursor: pointer;
+            transition: border-color 0.2s ease;
+            font-size: 14px;
+            min-width: 120px;
         }
+
+        select:hover {
+            border-color: #cbd5e1;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.1);
+        }
+
         .hidden {
             display: none;
         }
     </style>
 </head>
 <body>
-
-    <h1>Camera Interaction App</h1>
-
-    <video id="videoFeed" autoplay playsinline></video>
-    <canvas id="canvas" class="hidden"></canvas> <!-- For capturing frames -->
-
-    <div class="io-areas">
-        <div>
-            <label for="baseURL">Base API:</label><br>
-            <input id="baseURL" name="Instruction" value="http://localhost:8080"></textarea>
+    <header class="header">
+        <div class="header-left">
+            <h1>SmolVLM Realtime</h1>
+            <a href="https://twitter.com/ngxson" target="_blank" rel="noopener noreferrer" class="twitter-handle">
+                <svg viewBox="0 0 24 24">
+                    <path d="M23.643 4.937c-.835.37-1.732.62-2.675.733.962-.576 1.7-1.49 2.048-2.578-.9.534-1.897.922-2.958 1.13-.85-.904-2.06-1.47-3.4-1.47-2.572 0-4.658 2.086-4.658 4.66 0 .364.042.718.12 1.06-3.873-.195-7.304-2.05-9.602-4.868-.4.69-.63 1.49-.63 2.342 0 1.616.823 3.043 2.072 3.878-.764-.025-1.482-.234-2.11-.583v.06c0 2.257 1.605 4.14 3.737 4.568-.392.106-.803.162-1.227.162-.3 0-.593-.028-.877-.082.593 1.85 2.313 3.198 4.352 3.234-1.595 1.25-3.604 1.995-5.786 1.995-.376 0-.747-.022-1.112-.065 2.062 1.323 4.51 2.093 7.14 2.093 8.57 0 13.255-7.098 13.255-13.254 0-.2-.005-.402-.014-.602.91-.658 1.7-1.477 2.323-2.41z"/>
+                </svg>
+                @ngxson
+            </a>
         </div>
-        <div>
-            <label for="instructionText">Instruction:</label><br>
-            <textarea id="instructionText" style="height: 2em; width: 40em" name="Instruction"></textarea>
-        </div>
-        <div>
-            <label for="responseText">Response:</label><br>
-            <textarea id="responseText" style="height: 2em; width: 40em" name="Response" readonly placeholder="Server response will appear here..."></textarea>
-        </div>
-    </div>
+    </header>
 
-    <div class="controls">
-        <label for="intervalSelect">Interval between 2 requests:</label>
-        <select id="intervalSelect" name="Interval between 2 requests">
-            <option value="100">100ms</option>
-            <option value="250">250ms</option>
-            <option value="500" selected>500ms</option>
-            <option value="1000">1s</option>
-            <option value="2000">2s</option>
-        </select>
-        <button id="startButton" class="start">Start</button>
-    </div>
+    <main class="main-content">
+        <video id="videoFeed" autoplay playsinline></video>
+        <canvas id="canvas" class="hidden"></canvas> <!-- For capturing frames -->
+
+        <div class="io-areas">
+            <div>
+                <label for="baseURL">Base API:</label><br>
+                <input id="baseURL" name="Instruction" value="http://localhost:8080"></textarea>
+            </div>
+            <div>
+                <label for="instructionText">Instruction:</label><br>
+                <textarea id="instructionText" style="height: 2em; width: 40em" name="Instruction"></textarea>
+            </div>
+            <div>
+                <label for="responseText">Response:</label><br>
+                <textarea id="responseText" style="height: 2em; width: 40em" name="Response" readonly placeholder="Server response will appear here..."></textarea>
+            </div>
+        </div>
+
+        <div class="controls">
+            <label for="intervalSelect">Interval between 2 requests:</label>
+            <select id="intervalSelect" name="Interval between 2 requests">
+                <option value="100">100ms</option>
+                <option value="250">250ms</option>
+                <option value="500" selected>500ms</option>
+                <option value="1000">1s</option>
+                <option value="2000">2s</option>
+            </select>
+            <button id="startButton" class="start">Start</button>
+        </div>
+    </main>
 
     <script>
         const video = document.getElementById('videoFeed');
