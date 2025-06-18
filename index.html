@@ -97,6 +97,13 @@
             border: 1px solid var(--border-color);
         }
 
+        .source-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
         .io-areas {
             flex-direction: column;
             align-items: stretch;
@@ -199,12 +206,6 @@
     <header class="header">
         <div class="header-left">
             <h1>SmolVLM Realtime</h1>
-            <a href="https://twitter.com/ngxson" target="_blank" rel="noopener noreferrer" class="twitter-handle">
-                <svg viewBox="0 0 24 24">
-                    <path d="M23.643 4.937c-.835.37-1.732.62-2.675.733.962-.576 1.7-1.49 2.048-2.578-.9.534-1.897.922-2.958 1.13-.85-.904-2.06-1.47-3.4-1.47-2.572 0-4.658 2.086-4.658 4.66 0 .364.042.718.12 1.06-3.873-.195-7.304-2.05-9.602-4.868-.4.69-.63 1.49-.63 2.342 0 1.616.823 3.043 2.072 3.878-.764-.025-1.482-.234-2.11-.583v.06c0 2.257 1.605 4.14 3.737 4.568-.392.106-.803.162-1.227.162-.3 0-.593-.028-.877-.082.593 1.85 2.313 3.198 4.352 3.234-1.595 1.25-3.604 1.995-5.786 1.995-.376 0-.747-.022-1.112-.065 2.062 1.323 4.51 2.093 7.14 2.093 8.57 0 13.255-7.098 13.255-13.254 0-.2-.005-.402-.014-.602.91-.658 1.7-1.477 2.323-2.41z"/>
-                </svg>
-                @ngxson
-            </a>
         </div>
     </header>
 
@@ -228,6 +229,14 @@
         </div>
 
         <div class="controls">
+            <div class="source-controls">
+                <label for="sourceSelect">Video Source:</label>
+                <select id="sourceSelect">
+                    <option value="camera" selected>Camera</option>
+                    <option value="screen">Screen Share</option>
+                </select>
+                <select id="cameraSelect" class="device-select"></select>
+            </div>
             <label for="intervalSelect">Interval between 2 requests:</label>
             <select id="intervalSelect" name="Interval between 2 requests">
                 <option value="100">100ms</option>
@@ -248,12 +257,15 @@
         const responseText = document.getElementById('responseText');
         const intervalSelect = document.getElementById('intervalSelect');
         const startButton = document.getElementById('startButton');
+        const sourceSelect = document.getElementById('sourceSelect');
+        const cameraSelect = document.getElementById('cameraSelect');
 
         instructionText.value = "What do you see?"; // default instruction
 
         let stream;
         let intervalId;
         let isProcessing = false;
+        let currentStreamSource = 'camera';
 
         // Returns response text (string)
         async function sendChatCompletionRequest(instruction, imageBase64URL) {
@@ -288,10 +300,51 @@
                 stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
                 video.srcObject = stream;
                 responseText.value = "Camera access granted. Ready to start.";
+                await initCameraSelect();
             } catch (err) {
                 console.error("Error accessing camera:", err);
                 responseText.value = `Error accessing camera: ${err.name} - ${err.message}. Please ensure permissions are granted and you are on HTTPS or localhost.`;
                 alert(`Error accessing camera: ${err.name}. Make sure you've granted permission and are on HTTPS or localhost.`);
+            }
+        }
+
+        async function initCameraSelect() {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const videoDevices = devices.filter(device => device.kind === 'videoinput');
+
+            cameraSelect.innerHTML = ''; // Clear existing options
+
+            videoDevices.forEach(device => {
+                const option = document.createElement('option');
+                option.value = device.deviceId;
+                option.textContent = device.label || `Camera ${cameraSelect.length + 1}`;
+                cameraSelect.appendChild(option);
+            });
+
+            if (videoDevices.length > 0) {
+                cameraSelect.classList.remove('hidden');
+                // Optionally, automatically select the first camera
+                // cameraSelect.value = videoDevices[0].deviceId;
+            } else {
+                cameraSelect.classList.add('hidden');
+            }
+        }
+
+        async function switchCamera(deviceId) {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+            try {
+                const newStream = await navigator.mediaDevices.getUserMedia({
+                    video: { deviceId: { exact: deviceId } },
+                    audio: false
+                });
+                stream = newStream;
+                video.srcObject = stream;
+                responseText.value = "Switched camera successfully.";
+            } catch (err) {
+                console.error("Error switching camera:", err);
+                responseText.value = `Error switching camera: ${err.message}`;
             }
         }
 
@@ -382,6 +435,57 @@
             } else {
                 handleStart();
             }
+        });
+
+        async function startScreenShare() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+            try {
+                stream = await navigator.mediaDevices.getDisplayMedia({
+                    video: {
+                        cursor: "always"
+                    },
+                    audio: false
+                });
+                
+                // Handle stream ending (user stops sharing)
+                stream.getVideoTracks()[0].addEventListener('ended', () => {
+                    responseText.value = "Screen sharing ended.";
+                    // Switch back to camera
+                    sourceSelect.value = 'camera';
+                    initCamera();
+                });
+
+                video.srcObject = stream;
+                responseText.value = "Screen sharing started. Ready to process.";
+            } catch (err) {
+                console.error("Error starting screen share:", err);
+                responseText.value = `Error starting screen share: ${err.message}`;
+                // Switch back to camera
+                sourceSelect.value = 'camera';
+                initCamera();
+            }
+        }
+
+        sourceSelect.addEventListener('change', (event) => {
+            const selectedSource = event.target.value;
+            currentStreamSource = selectedSource;
+
+            if (selectedSource === 'camera') {
+                // Stop screen sharing if active
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                }
+                initCamera();
+            } else if (selectedSource === 'screen') {
+                startScreenShare();
+            }
+        });
+
+        cameraSelect.addEventListener('change', (event) => {
+            const deviceId = event.target.value;
+            switchCamera(deviceId);
         });
 
         // Initialize camera when the page loads
